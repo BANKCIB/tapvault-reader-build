@@ -15,6 +15,8 @@ final class NFCService: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
     private var tagSession: NFCTagReaderSession?
     private var detectedCard: SavedCard?
     private var handlingTag = false
+    private var recovery = TagScanRecovery()
+    private var tagAttemptID = UUID()
     var available: Bool { NFCNDEFReaderSession.readingAvailable }
 
     func scanNDEF() { begin(records: nil) }
@@ -26,7 +28,7 @@ final class NFCService: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
         } catch { errorMessage = error.localizedDescription }
     }
     func cancel() {
-        finished = true; detectedCard = nil; scanned = nil
+        finished = true; detectedCard = nil; scanned = nil; tagAttemptID = UUID()
         session?.invalidate(); tagSession?.invalidate()
     }
     private func begin(records: [TagRecord]?) {
@@ -133,6 +135,7 @@ extension NFCService: NFCTagReaderSessionDelegate {
         }
         scanned = nil; errorMessage = nil; detectedCard = nil; pendingWrite = nil
         finished = false; handlingTag = false; writeSucceeded = false; busy = true
+        recovery = TagScanRecovery(); tagAttemptID = UUID()
         tagSession = next; status = "قرّب البطاقة من أعلى ظهر الآيفون وأبقها ثابتة"
         next.alertMessage = status; next.begin()
     }
@@ -162,10 +165,7 @@ extension NFCService: NFCTagReaderSessionDelegate {
         guard tagSession === session, !finished, !handlingTag else { return }
         guard tags.count == 1, let tag = tags.first else {
             session.alertMessage = "أبعد البطاقات الأخرى واترك بطاقة واحدة فقط."
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                guard let self, self.tagSession === session, !self.finished else { return }
-                session.restartPolling()
-            }
+            restartInspectionPolling(session)
             return
         }
         let ndefTag: NFCNDEFTag
@@ -194,41 +194,58 @@ extension NFCService: NFCTagReaderSessionDelegate {
         @unknown default:
             finished = true; session.invalidate(errorMessage: "أعاد النظام نوع بطاقة غير معروف لهذا الإصدار."); return
         }
+        guard recovery.accepts(technology: info.technology, identifier: info.identifier) else {
+            status = "أعد البطاقة الأولى نفسها لإكمال الفحص، أو ألغِ لبدء فحص بطاقة أخرى."
+            session.alertMessage = status
+            restartInspectionPolling(session)
+            return
+        }
         handlingTag = true
-        var card = SavedCard(title: info.family, source: "فحص شريحة NFC")
-        card.inspection = info; detectedCard = card
+        let attempt = UUID(); tagAttemptID = attempt
+        if detectedCard == nil {
+            var card = SavedCard(title: info.family, source: "فحص شريحة NFC")
+            card.inspection = info; detectedCard = card
+        }
         status = "تم اكتشاف الشريحة؛ جارٍ قراءة معلوماتها"; session.alertMessage = status
         session.connect(to: tag) { [weak self] error in
             DispatchQueue.main.async {
-                guard let self, self.tagSession === session, !self.finished else { return }
+                guard let self, self.tagSession === session, !self.finished, self.tagAttemptID == attempt else { return }
                 if let error {
+                    if self.retryInspection(session, error: error, stage: "الاتصال بالشريحة") { return }
                     self.completeInspection(session, detail: "اكتُشفت الشريحة وتعذر الاتصال لقراءة محتواها. أعد الفحص. " + error.localizedDescription)
                     return
                 }
-                if case .miFare(let mifare) = tag, mifare.mifareFamily == .ultralight {
+                if case .miFare(let mifare) = tag, mifare.mifareFamily == .ultralight,
+                   self.recovery.shouldReadVersion, self.detectedCard?.inspection?.versionResponse == nil {
                     // Read-only product information. No authentication, memory writes or access-key commands.
                     mifare.sendMiFareCommand(commandPacket: Data([0x60])) { [weak self] response, error in
                         DispatchQueue.main.async {
-                            guard let self, self.tagSession === session, !self.finished else { return }
-                            if error == nil, response.count == 8 {
+                            guard let self, self.tagSession === session, !self.finished, self.tagAttemptID == attempt else { return }
+                            if let error {
+                                if self.retryInspection(session, error: error, stage: "تحديد الطراز", versionFailure: true) { return }
+                                self.completeInspection(session, detail: "تم التعرف على عائلة الشريحة، لكن لم يكتمل تحديد طرازها بعد إعادة المحاولة. ثبّت البطاقة قرب أعلى ظهر الآيفون وأعد الفحص.")
+                                return
+                            }
+                            if response.count == 8 {
                                 self.detectedCard?.inspection?.applyUltralightVersion(response)
                                 if let name = self.detectedCard?.inspection?.family { self.detectedCard?.title = name }
                             }
-                            self.inspectNDEF(ndefTag, session: session)
+                            self.inspectNDEF(ndefTag, session: session, attempt: attempt)
                         }
                     }
-                } else { self.inspectNDEF(ndefTag, session: session) }
+                } else { self.inspectNDEF(ndefTag, session: session, attempt: attempt) }
             }
         }
     }
 
-    private func inspectNDEF(_ tag: NFCNDEFTag, session: NFCTagReaderSession) {
-        guard tagSession === session, !finished else { return }
+    private func inspectNDEF(_ tag: NFCNDEFTag, session: NFCTagReaderSession, attempt: UUID) {
+        guard tagSession === session, !finished, tagAttemptID == attempt else { return }
         status = "جارٍ فحص بيانات NDEF"; session.alertMessage = status
         tag.queryNDEFStatus { [weak self] access, capacity, error in
             DispatchQueue.main.async {
-                guard let self, self.tagSession === session, !self.finished else { return }
+                guard let self, self.tagSession === session, !self.finished, self.tagAttemptID == attempt else { return }
                 if let error {
+                    if self.retryInspection(session, error: error, stage: "فحص حالة NDEF") { return }
                     self.completeInspection(session, detail: "قُرئت معلومات الشريحة، وتعذر تحديد حالة NDEF. " + error.localizedDescription)
                     return
                 }
@@ -246,8 +263,9 @@ extension NFCService: NFCTagReaderSessionDelegate {
                 self.detectedCard?.sourceWritable = access == .readWrite
                 tag.readNDEF { [weak self] message, error in
                     DispatchQueue.main.async {
-                        guard let self, self.tagSession === session, !self.finished else { return }
+                        guard let self, self.tagSession === session, !self.finished, self.tagAttemptID == attempt else { return }
                         if let error {
+                            if self.retryInspection(session, error: error, stage: "قراءة رسالة NDEF") { return }
                             self.completeInspection(session, detail: "قُرئت معلومات الشريحة؛ تعذرت قراءة رسالة NDEF. هذا لا يثبت أن البطاقة محمية. " + error.localizedDescription)
                             return
                         }
@@ -265,6 +283,36 @@ extension NFCService: NFCTagReaderSessionDelegate {
                     }
                 }
             }
+        }
+    }
+
+    private func retryInspection(_ session: NFCTagReaderSession, error: Error, stage: String, versionFailure: Bool = false) -> Bool {
+        guard tagSession === session, !finished else { return false }
+        let nfcError = error as? NFCReaderError
+        let connectionLost = nfcError?.code == .readerTransceiveErrorTagConnectionLost ||
+            nfcError?.code == .readerTransceiveErrorTagNotConnected ||
+            nfcError?.code == .readerTransceiveErrorRetryExceeded
+        let errorInfo = error as NSError
+        var diagnostics = detectedCard?.inspection?.diagnostics ?? []
+        diagnostics.append(String("\(stage): \(errorInfo.domain) · \(errorInfo.code) · \(error.localizedDescription)".prefix(512)))
+        detectedCard?.inspection?.diagnostics = Array(diagnostics.suffix(8))
+        // An invalidated session cannot rediscover; its delegate will finish the partial result.
+        guard nfcError?.code != .readerTransceiveErrorSessionInvalidated else { return false }
+        let retry = versionFailure ? recovery.retryVersionFailure(connectionLost: connectionLost) :
+            (connectionLost && recovery.retryConnectionLoss())
+        guard retry else { return false }
+        status = "نعيد الاتصال بالبطاقة · محاولة \(recovery.retryCount) من 2. أبقها ثابتة قرب أعلى ظهر الآيفون."
+        session.alertMessage = status
+        restartInspectionPolling(session)
+        return true
+    }
+
+    private func restartInspectionPolling(_ session: NFCTagReaderSession) {
+        // Previously detected tags become invalid after restartPolling. Only retain plain metadata.
+        let pending = UUID(); tagAttemptID = pending; handlingTag = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.tagSession === session, !self.finished, self.tagAttemptID == pending else { return }
+            self.handlingTag = false; session.restartPolling()
         }
     }
 

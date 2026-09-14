@@ -10,6 +10,7 @@ public struct TagInspection: Codable, Hashable, Sendable {
     public var totalMemoryBytes: Int?
     public var ndefStatus: String
     public var detail: String
+    public var diagnostics: [String]?
     public init(technology: String, family: String, identifier: String,
                 ndefStatus: String = "لم يكتمل الفحص", detail: String = "تم التعرف على الشريحة.") {
         self.technology = technology; self.family = family; self.identifier = identifier
@@ -18,7 +19,9 @@ public struct TagInspection: Codable, Hashable, Sendable {
     public func validate() throws {
         guard !technology.isEmpty, technology.count <= 120, !family.isEmpty, family.count <= 120,
               identifier.count <= 256, (versionResponse?.count ?? 0) <= 512,
-              ndefStatus.count <= 120, detail.count <= 2048 else { throw CardError.invalidData }
+              ndefStatus.count <= 120, detail.count <= 2048,
+              (diagnostics?.count ?? 0) <= 8,
+              diagnostics?.allSatisfy({ $0.count <= 512 }) ?? true else { throw CardError.invalidData }
         for size in [userMemoryBytes, totalMemoryBytes].compactMap({ $0 }) {
             guard (0...1_048_576).contains(size) else { throw CardError.invalidData }
         }
@@ -31,6 +34,7 @@ public struct TagInspection: Codable, Hashable, Sendable {
         if let totalMemoryBytes { lines.append("الذاكرة الكلية: \(totalMemoryBytes) بايت") }
         if let versionResponse { lines.append("GET_VERSION: \(versionResponse)") }
         lines.append(detail)
+        lines.append(contentsOf: diagnostics ?? [])
         return lines.joined(separator: "\n")
     }
     public mutating func applyUltralightVersion(_ response: Data) {

@@ -22,6 +22,16 @@ struct TagInspectionView: View {
                         .environment(\.layoutDirection, .leftToRight)
                 }.font(.footnote)
             }
+            if let diagnostics = inspection.diagnostics, !diagnostics.isEmpty {
+                DisclosureGroup("تفاصيل المحاولات") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(Array(diagnostics.enumerated()), id: \.offset) { _, line in
+                            Text(line).font(.footnote).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }.padding(.top, 8)
+                }.font(.footnote)
+            }
             ShareLink(item: inspection.textReport) {
                 Label("مشاركة معلومات الشريحة", systemImage: "square.and.arrow.up").frame(minHeight: 44)
             }.font(.subheadline)
