@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleDisplayName</key><string>قُرب</string>
+<key>CFBundleDevelopmentRegion</key><string>ar</string>
+<key>CFBundleLocalizations</key><array><string>ar</string><string>en</string></array>
+<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+<key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>1.1.0</string>
+<key>CFBundleVersion</key><string>3</string>
+<key>LSRequiresIPhoneOS</key><true/>
+<key>NFCReaderUsageDescription</key><string>قراءة بيانات وسوم NFC التي تختارها وكتابة النصوص والروابط على وسومك المتوافقة.</string>
+<key>NSFaceIDUsageDescription</key><string>استخدم Face ID لفتح خزنتك الشخصية.</string>
+<key>UILaunchScreen</key><dict/>
+<key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
+<key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+<key>UTExportedTypeDeclarations</key><array><dict><key>UTTypeIdentifier</key><string>com.m7madv.tapvault.backup</string><key>UTTypeDescription</key><string>TapVault encrypted backup</string><key>UTTypeConformsTo</key><array><string>public.data</string></array><key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>tapvault</string></array><key>public.mime-type</key><string>application/vnd.tapvault.backup</string></dict></dict></array>
+</dict></plist>
