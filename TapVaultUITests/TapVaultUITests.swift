@@ -7,12 +7,13 @@ final class TapVaultUITests: XCTestCase {
         XCTAssertTrue(app.buttons["scan-tag"].waitForExistence(timeout: 10))
         capture("01-library-light")
         app.buttons["add-card"].tap()
-        app.buttons["نص أو رابط جديد"].tap()
+        app.buttons["تجهيز وسم جديد"].tap()
         let title = app.textFields["card-title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Demo note")
-        let content = app.textViews.firstMatch
-        if content.exists { content.tap(); content.typeText("Hello NFC") }
-        else { let field = app.textFields["المحتوى"]; field.tap(); field.typeText("Hello NFC") }
+        app.buttons["add-record"].tap()
+        let field = app.textFields["النص"]; XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap(); field.typeText("Hello NFC")
+        app.buttons["confirm-record"].tap()
         app.buttons["save-card"].tap()
         XCTAssertTrue(app.staticTexts["Demo note"].waitForExistence(timeout: 5))
         app.staticTexts["Demo note"].tap()
@@ -28,6 +29,51 @@ final class TapVaultUITests: XCTestCase {
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+
+    @MainActor
+    func testWriterValidationMultipleRecordsAndEditRoundTrip() {
+        let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
+        app.tabBars.buttons["الأدوات"].tap()
+        let writer = app.buttons["open-writer"]
+        if !writer.isHittable { app.swipeUp() }; writer.tap()
+        XCTAssertFalse(app.buttons["save-card"].isEnabled)
+        let title = app.textFields["card-title"]; title.tap(); title.typeText("Multi record")
+        app.buttons["add-record"].tap()
+        app.buttons["record-kind"].tap(); app.buttons["رابط موقع"].tap()
+        let url = app.textFields["الرابط"]; url.tap(); url.typeText("invalid")
+        app.buttons["confirm-record"].tap()
+        XCTAssertTrue(app.buttons["confirm-record"].exists)
+        url.tap(); url.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 7) + "https://example.com")
+        capture("06-url-editor")
+        app.buttons["confirm-record"].tap()
+        app.buttons["add-record"].tap()
+        app.buttons["record-kind"].tap(); app.buttons["بيانات JSON"].tap()
+        let json = app.textFields["بيانات JSON"]; json.tap(); json.typeText("{\"id\":123}")
+        app.buttons["confirm-record"].tap()
+        capture("07-multiple-records")
+        app.buttons["save-card"].tap()
+        app.tabBars.buttons["مكتبتي"].tap()
+        let card = app.staticTexts["Multi record"]; XCTAssertTrue(card.waitForExistence(timeout: 5)); if !card.isHittable { app.swipeUp() }; card.tap()
+        XCTAssertTrue(app.staticTexts["https://example.com"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["{\"id\":123}"].exists)
+        let edit = app.buttons["edit-records"]; if !edit.isHittable { app.swipeUp() }; edit.tap()
+        app.buttons["save-card"].tap()
+        XCTAssertTrue(app.staticTexts["{\"id\":123}"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testWriterDarkModeAndContactPreview() {
+        let app = XCUIApplication(); app.launchArguments = ["--uitesting", "-AppleInterfaceStyle", "Dark"]; app.launch()
+        app.buttons["add-card"].tap(); app.buttons["تجهيز وسم جديد"].tap()
+        capture("08-writer-dark-empty")
+        app.buttons["add-record"].tap()
+        app.buttons["record-kind"].tap(); app.buttons["جهة اتصال"].tap()
+        let name = app.textFields["الاسم"]; name.tap(); name.typeText("Demo Contact")
+        capture("09-contact-editor-dark")
+        app.buttons["confirm-record"].tap()
+        XCTAssertTrue(app.staticTexts["جهة اتصال"].exists)
     }
 
     @MainActor

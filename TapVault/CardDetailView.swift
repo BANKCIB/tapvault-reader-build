@@ -9,6 +9,7 @@ struct CardDetailView: View {
     @State private var editing = false
     @State private var deleting = false
     @State private var writing = false
+    @State private var editingContent = false
     @State private var qrText: String?
     var body: some View {
         Group {
@@ -22,7 +23,7 @@ struct CardDetailView: View {
                         }
                         if !card.records.isEmpty {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("البيانات المحفوظة").font(.headline)
+                                HStack { Text("البيانات المحفوظة").font(.headline); Spacer(); Text("\(card.encodedByteCount) بايت").font(.caption).foregroundStyle(.secondary) }
                                 ForEach(Array(card.records.enumerated()), id: \.offset) { index, record in
                                     VStack(alignment: .leading, spacing: 12) {
                                         Text("سجل \(index + 1)").font(.caption).foregroundStyle(.secondary)
@@ -50,7 +51,8 @@ struct CardDetailView: View {
                         if card.canWrite {
                             Button { writing = true } label: { Label("كتابة على وسم آخر", systemImage: "wave.3.right").frame(maxWidth: .infinity).padding(.vertical, 10) }
                                 .buttonStyle(.borderedProminent).disabled(nfc.busy)
-                            Text("ينقل النص أو الرابط فقط. لا ينسخ هوية الشريحة أو مفاتيحها السرية.").font(.footnote).foregroundStyle(.secondary)
+                            Button { editingContent = true } label: { Label("تحرير سجلات الكتابة", systemImage: "square.and.pencil").frame(minHeight: 44) }.accessibilityIdentifier("edit-records")
+                            Text("يكتب سجلات NDEF المحفوظة بعد فحص سعة الوجهة. يمكنك تكرار الكتابة على وسم آخر من هذه الصفحة.").font(.footnote).foregroundStyle(.secondary)
                         } else if card.inspection == nil || !card.records.isEmpty {
                             Label(card.records.isEmpty ? "مرجع محفوظ. اطلب المفتاح أو التذكرة الرقمية من جهة الإصدار." : "هذه السجلات محفوظة للفحص، وليست ضمن أنواع الكتابة المتاحة.", systemImage: "info.circle").font(.callout).foregroundStyle(.secondary)
                         }
@@ -70,6 +72,7 @@ struct CardDetailView: View {
                 .navigationTitle(card.category.title).navigationBarTitleDisplayMode(.inline)
                 .toolbar { Button("تعديل") { editing = true } }
                 .sheet(isPresented: $editing) { CardEditor(card: card) }
+                .sheet(isPresented: $editingContent) { WriterView(card: card) }
                 .sheet(isPresented: Binding(get: { qrText != nil }, set: { if !$0 { qrText = nil } })) { QRSheet(text: qrText ?? "") }
                 .confirmationDialog("ستستبدل هذه العملية بيانات وسم الوجهة. استخدم وسمًا تملكه وقابلًا للكتابة.", isPresented: $writing, titleVisibility: .visible) {
                     Button("بدء الكتابة") { nfc.write(card) }; Button("إلغاء", role: .cancel) {}

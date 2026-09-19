@@ -11,6 +11,7 @@ final class NFCService: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
     @Published var writeSucceeded = false
     private var session: NFCNDEFReaderSession?
     private var pendingWrite: [TagRecord]?
+    private var handlingNDEF = false
     private var finished = false
     private var tagSession: NFCTagReaderSession?
     private var detectedCard: SavedCard?
@@ -34,7 +35,7 @@ final class NFCService: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
     private func begin(records: [TagRecord]?) {
         guard !busy else { return }
         guard available else { errorMessage = "قراءة NFC غير متاحة هنا. استخدم iPhone متوافقًا ونسخة موقعة بصلاحية قراءة الوسوم."; return }
-        pendingWrite = records; scanned = nil; finished = false; writeSucceeded = false; errorMessage = nil; busy = true
+        pendingWrite = records; handlingNDEF = false; scanned = nil; finished = false; writeSucceeded = false; errorMessage = nil; busy = true
         let next = NFCNDEFReaderSession(delegate: self, queue: .main, invalidateAfterFirstRead: false)
         session = next
         status = records == nil ? "قرّب أعلى iPhone من الوسم" : "قرّب وسم الوجهة وابقه ثابتًا"
@@ -47,17 +48,18 @@ final class NFCService: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
             if let nfcError = error as? NFCReaderError, nfcError.code == .readerSessionInvalidationErrorUserCanceled { status = "أُلغيت العملية" }
             else { errorMessage = "لم تكتمل العملية. قرّب وسم NDEF متوافقًا وأعد المحاولة.\n" + error.localizedDescription; status = "تعذرت العملية" }
         }
-        self.session = nil; pendingWrite = nil; busy = false
+        self.session = nil; pendingWrite = nil; handlingNDEF = false; busy = false
     }
     func readerSession(_ session: NFCNDEFReaderSession, didDetect tags: [NFCNDEFTag]) {
-        guard self.session === session, !finished else { return }
+        guard self.session === session, !finished, !handlingNDEF else { return }
         guard tags.count == 1, let tag = tags.first else {
             session.alertMessage = "أبعد البطاقات الأخرى؛ نحتاج وسمًا واحدًا فقط."
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                if self?.session === session { session.restartPolling() }
+                if let self, self.session === session, !self.finished, !self.handlingNDEF { session.restartPolling() }
             }
             return
         }
+        handlingNDEF = true
         session.connect(to: tag) { [weak self] error in
             DispatchQueue.main.async {
                 guard let self, self.session === session, !self.finished else { return }
@@ -79,7 +81,7 @@ final class NFCService: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate
             DispatchQueue.main.async {
                 guard let self, self.session === session, !self.finished else { return }
                 if let error { self.fail(session, "تعذرت قراءة رسالة NDEF. جرّب فحص البطاقة لعرض معلومات الشريحة. " + error.localizedDescription); return }
-                guard let message, !message.records.isEmpty else { self.fail(session, "الوسم فارغ. يمكنك إنشاء نص أو رابط وكتابته عليه."); return }
+                guard let message, !message.records.isEmpty else { self.fail(session, "الوسم فارغ. افتح تجهيز وسم للكتابة لإضافة محتوى."); return }
                 let records = Self.records(message)
                 let card = SavedCard(title: "وسم جديد", records: records, source: "قراءة NFC", capacity: capacity, sourceWritable: writable)
                 do { try card.validate() } catch { self.fail(session, error.localizedDescription); return }

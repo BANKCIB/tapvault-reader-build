@@ -21,7 +21,7 @@ final class CardCoreTests: XCTestCase {
         XCTAssertNil(record.textValue); XCTAssertFalse(record.isWritableContent)
     }
     func testUnknownRecordsPreservedButNotWritable() {
-        let record = TagRecord(tnf: 2, type: Data("application/octet-stream".utf8), payload: Data([1, 2, 3]))
+        let record = TagRecord(tnf: 4, type: Data("example.com:unknown".utf8), payload: Data([1, 2, 3]))
         XCTAssertFalse(SavedCard(title: "raw", records: [record]).canWrite)
     }
     func testReferenceCardIsNotAKey() { XCTAssertFalse(SavedCard(title: "Hotel", category: .hotel).canWrite) }

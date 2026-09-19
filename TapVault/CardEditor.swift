@@ -15,7 +15,11 @@ struct CardEditor: View {
     @State private var expiresAt: Date
     @State private var errorMessage: String?
     @State private var discard = false
-    private var rawRecords: Bool { original.map { $0.records.count > 1 || ($0.records.count == 1 && !$0.canWrite) } ?? false }
+    private var rawRecords: Bool {
+        guard let original else { return false }
+        guard original.records.count == 1, let record = original.records.first else { return !original.records.isEmpty }
+        return record.textValue == nil && !(record.uriValue.map { (try? TagRecord.uri($0)) != nil } ?? false)
+    }
     init(card: SavedCard? = nil, reference: Bool = false) {
         original = card
         _title = State(initialValue: card?.title ?? "")

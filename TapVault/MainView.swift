@@ -18,7 +18,10 @@ struct MainView: View {
                 .tabItem { Label("الأدوات", systemImage: "wave.3.right") }
             NavigationStack { SettingsView() }.tabItem { Label("الخزنة", systemImage: "lock.shield") }
         }
-        .sheet(item: $editor) { request in CardEditor(card: request.card, reference: request.reference) }
+        .sheet(item: $editor) { request in
+            if request.card == nil && !request.reference { WriterView() }
+            else { CardEditor(card: request.card, reference: request.reference) }
+        }
         .onReceive(nfc.$scanned) { card in
             guard let card else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
@@ -91,7 +94,7 @@ struct LibraryView: View {
             }
             Spacer()
             Menu {
-                Button("نص أو رابط جديد", systemImage: "plus", action: onCreate)
+                Button("تجهيز وسم جديد", systemImage: "plus", action: onCreate)
                 Button("مرجع فندق أو تنقل", systemImage: "bookmark", action: onReference)
             } label: { Image(systemName: "plus").font(.title3.weight(.medium)).frame(width: 48, height: 48).background(Theme.surface, in: Circle()) }
             .accessibilityLabel("إضافة بطاقة").accessibilityIdentifier("add-card")
@@ -162,19 +165,20 @@ struct ToolsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("أدوات بسيطة.\nاستخدام واضح.").font(.largeTitle.weight(.bold))
-                Text("اقرأ البيانات القياسية، أو جهز وسمًا جديدًا لاستخدامك.").foregroundStyle(.secondary)
+                Text("اقرأ. جهّز.\nواكتب بثقة.").font(.largeTitle.weight(.bold))
+                Text("روابط ونصوص وجهات اتصال وبيانات لأنظمتك، في وسومك الخاصة.").foregroundStyle(.secondary)
                 VStack(spacing: 12) {
                     ToolButton(title: "قراءة بطاقة أو وسم", subtitle: "التعرّف على الشريحة أولًا، ثم قراءة NDEF إن توفر", symbol: "radiowaves.left.and.right") { nfc.scan() }.disabled(nfc.busy)
                     ToolButton(title: "قراءة NDEF مباشرة", subtitle: "المسار القياسي لقراءة الرسائل من الوسوم المتوافقة", symbol: "doc.text.viewfinder") { nfc.scanNDEF() }.disabled(nfc.busy)
-                    ToolButton(title: "إنشاء نص أو رابط", subtitle: "احفظه، ثم اكتبه على وسم متوافق", symbol: "square.and.pencil", action: onCreate)
+                    ToolButton(title: "تجهيز وسم للكتابة", subtitle: "10 أنواع من البيانات · عدة سجلات · فحص الحجم", symbol: "square.and.pencil", action: onCreate).accessibilityIdentifier("open-writer")
                     ToolButton(title: "إضافة مرجع بطاقة", subtitle: "اسم الجهة والملاحظات ورابطها الرسمي", symbol: "bookmark", action: onReference)
                 }
                 Label(nfc.status, systemImage: nfc.busy ? "hourglass" : "wave.3.right").font(.callout).foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 16) {
                     Text("ما الذي يدعمه التطبيق؟").font(.headline)
                     capability("القراءة والحفظ", "بيانات NDEF المتاحة على الوسوم المتوافقة.", "checkmark.circle")
-                    capability("الكتابة", "نصوص وروابط على وسم قابل للكتابة، مع فحص السعة والتحقق بعد الكتابة.", "checkmark.circle")
+                    capability("الكتابة والتحقق", "نص ورابط وهاتف وبريد ورسالة وموقع وجهة اتصال. فحص السعة ثم إعادة قراءة للتحقق.", "checkmark.circle")
+                    capability("أنظمتك وتطبيقاتك", "روابط تطبيقات وبيانات JSON أو MIME ثنائية. يحتاج النظام القارئ إلى دعم الصيغة المستخدمة.", "curlybraces")
                     capability("بطاقات الفندق والقطار", "يمكن حفظ مرجعها. استخدامها كمفتاح أو تذكرة رقمية يحتاج إلى إصدار رسمي من الجهة.", "building.2")
                     capability("Apple Wallet", "يدعم فتح ملف بطاقة أصلي توفره الجهة. لا يحوّل مسح البطاقة البلاستيكية إلى مفتاح في المحفظة.", "wallet.pass")
                 }.padding(20).background(Theme.surface, in: RoundedRectangle(cornerRadius: 22))

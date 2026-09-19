@@ -7,7 +7,7 @@ public enum CardError: LocalizedError {
         switch self {
         case .invalidData: return "البيانات غير صالحة. تحقق من الملف وحاول مجددًا."
         case .invalidURL: return "أدخل رابطًا كاملًا يبدأ بـ https:// أو http://."
-        case .unsupportedRecord: return "هذه البيانات للحفظ والفحص فقط. الكتابة متاحة للنصوص والروابط القياسية."
+        case .unsupportedRecord: return "نوع السجل غير مدعوم للكتابة. استخدم نصًا أو رابطًا أو سجل MIME صالحًا."
         case .tooLarge: return "تجاوزت البيانات الحجم المسموح. قلل المحتوى وحاول مجددًا."
         case .invalidKey: return "رمز الاستعادة غير صالح. استخدم الرمز الكامل المرافق للنسخة."
         case .unsupportedBackup: return "إصدار النسخة الاحتياطية غير مدعوم."
@@ -43,7 +43,9 @@ public struct TagRecord: Codable, Hashable, Sendable {
         let value = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: value), ["https", "http"].contains(url.scheme?.lowercased() ?? ""),
               url.host != nil, !value.contains(where: { $0.isWhitespace }), url.user == nil, url.password == nil else { throw CardError.invalidURL }
-        let record = Self(tnf: 1, type: Data([0x55]), payload: Data([0]) + Data(value.utf8))
+        let prefixes: [(String, UInt8)] = [("https://www.", 2), ("http://www.", 1), ("https://", 4), ("http://", 3)]
+        let match = prefixes.first { value.hasPrefix($0.0) }
+        let record = Self(tnf: 1, type: Data([0x55]), payload: Data([match?.1 ?? 0]) + Data((match.map { String(value.dropFirst($0.0.count)) } ?? value).utf8))
         try record.validate(); return record
     }
     public var textValue: String? {
@@ -59,10 +61,19 @@ public struct TagRecord: Codable, Hashable, Sendable {
         guard Int(prefix) < prefixes.count, let suffix = String(data: payload.dropFirst(), encoding: .utf8) else { return nil }
         return prefixes[Int(prefix)] + suffix
     }
-    public var displayValue: String { textValue ?? uriValue ?? "بيانات NDEF خام · \(payload.count) بايت" }
+    public var displayValue: String {
+        if let value = textValue ?? uriValue { return value }
+        if let mimeType {
+            if mimeType.hasPrefix("text/") || mimeType == "application/json", let text = String(data: payload, encoding: .utf8) { return text }
+            return "\(mimeType) · \(payload.count) بايت"
+        }
+        return "بيانات NDEF خام · \(payload.count) بايت"
+    }
     public var isWritableContent: Bool {
+        guard (try? validate()) != nil else { return false }
         if let text = textValue { return !text.isEmpty }
-        if let uri = uriValue { return (try? Self.uri(uri)) != nil }
+        if let uri = uriValue { return (try? Self.applicationURI(uri)) != nil }
+        if mimeType != nil { return !payload.isEmpty }
         return false
     }
     public func validate() throws {
@@ -92,6 +103,7 @@ public struct SavedCard: Codable, Hashable, Identifiable, Sendable {
         self.createdAt = Date(); self.updatedAt = Date(); self.favorite = false
     }
     public var canWrite: Bool { !records.isEmpty && records.allSatisfy(\.isWritableContent) }
+    public var encodedByteCount: Int { records.reduce(0) { $0 + $1.encodedByteCount } }
     public var isExpired: Bool { expiresAt.map { $0 < Date() } ?? false }
     public var capability: String { records.isEmpty ? (inspection == nil ? "مرجع محفوظ" : "معلومات شريحة مقروءة") : canWrite ? "بيانات قابلة للكتابة" : "بيانات للفحص" }
     public var fingerprint: String? {
