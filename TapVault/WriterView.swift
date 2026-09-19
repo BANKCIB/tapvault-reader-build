@@ -43,7 +43,7 @@ struct WriterView: View {
                                 Spacer()
                                 Text("\((try? item.makeRecord().encodedByteCount) ?? 0) بايت").font(.caption).foregroundStyle(.secondary)
                             }.frame(minHeight: 44)
-                        }.contextMenu {
+                        }.buttonStyle(.plain).contextMenu {
                             Button("تحرير") { draft = item }
                             Button("تحريك لأعلى") { move(item.id, by: -1) }.disabled(records.first?.id == item.id)
                             Button("تحريك لأسفل") { move(item.id, by: 1) }.disabled(records.last?.id == item.id)
