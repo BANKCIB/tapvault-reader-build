@@ -12,7 +12,7 @@ struct ToolsView: View {
                     Text("قرّب أعلى الآيفون من الوسم وثبّته حتى تظهر النتيجة.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
-                ToolButton(title: "قراءة بطاقة أو وسم", subtitle: "يعرض نوع الشريحة ومعرّفها، ثم يقرأ المحتوى المتاح إن وُجد.", symbol: "radiowaves.left.and.right") { nfc.scan() }
+                ToolButton(title: "قراءة بطاقة أو وسم", subtitle: "يعرض نوع الشريحة ومعرّفها، ثم يقرأ المحتوى المتاح إن وُجد.", symbol: "dot.radiowaves.left.and.right") { nfc.scan() }
                     .disabled(nfc.busy).accessibilityIdentifier("inspect-tag")
                 Label(nfc.status, systemImage: nfc.busy ? "hourglass" : "wave.3.right")
                     .font(.callout).foregroundStyle(.secondary).accessibilityIdentifier("nfc-status")

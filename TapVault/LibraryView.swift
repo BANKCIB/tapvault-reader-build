@@ -75,7 +75,7 @@ struct LibraryView: View {
                     .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(Theme.ink)
             }.accessibilityIdentifier("library-write")
             Button { nfc.scan() } label: {
-                Label(nfc.busy ? "القراءة جارية…" : "قراءة بطاقة أو وسم", systemImage: "radiowaves.left.and.right")
+                Label(nfc.busy ? "القراءة جارية…" : "قراءة بطاقة أو وسم", systemImage: "dot.radiowaves.left.and.right")
                     .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
             }.disabled(nfc.busy).accessibilityIdentifier("scan-tag")
         }.foregroundStyle(.white).padding(20).background(Theme.ink, in: RoundedRectangle(cornerRadius: 24))

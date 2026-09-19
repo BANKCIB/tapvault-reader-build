@@ -18,7 +18,7 @@ struct MainView: View {
                 WritingHomeView(onCreate: { kind in editor = EditorRequest(kind: kind) })
             }.tabItem { Label("الكتابة", systemImage: "square.and.pencil") }
             NavigationStack { ToolsView(onReference: { editor = EditorRequest(reference: true) }) }
-                .tabItem { Label("القراءة", systemImage: "radiowaves.left.and.right") }
+                .tabItem { Label("القراءة", systemImage: "dot.radiowaves.left.and.right") }
             NavigationStack { SettingsView() }.tabItem { Label("الإعدادات", systemImage: "gearshape") }
         }
         .sheet(item: $editor) { request in
