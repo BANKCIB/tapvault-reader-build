@@ -61,12 +61,16 @@ public struct TagRecord: Codable, Hashable, Sendable {
         guard Int(prefix) < prefixes.count, let suffix = String(data: payload.dropFirst(), encoding: .utf8) else { return nil }
         return prefixes[Int(prefix)] + suffix
     }
-    public var displayValue: String {
+    public var shareableText: String? {
         if let value = textValue ?? uriValue { return value }
-        if let mimeType {
-            if mimeType.hasPrefix("text/") || mimeType == "application/json", let text = String(data: payload, encoding: .utf8) { return text }
-            return "\(mimeType) · \(payload.count) بايت"
+        if let mimeType, mimeType.hasPrefix("text/") || mimeType == "application/json" {
+            return String(data: payload, encoding: .utf8)
         }
+        return nil
+    }
+    public var displayValue: String {
+        if let value = shareableText { return value }
+        if let mimeType { return "\(mimeType) · \(payload.count) بايت" }
         return "بيانات NDEF خام · \(payload.count) بايت"
     }
     public var isWritableContent: Bool {

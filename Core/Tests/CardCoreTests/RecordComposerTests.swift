@@ -77,4 +77,9 @@ final class RecordComposerTests: XCTestCase {
         XCTAssertFalse(TagRecord(tnf: 2, type: Data("invalid".utf8), payload: Data([1])).isWritableContent)
         XCTAssertFalse(TagRecord(tnf: 2, type: Data("text/plain".utf8), payload: Data()).isWritableContent)
     }
+    func testBinarySummaryIsNotOfferedAsItsActualContent() throws {
+        let record = try TagRecord.binary(mimeType: "application/octet-stream", hex: "00FF")
+        XCTAssertNil(record.shareableText)
+        XCTAssertEqual(try TagRecord.json("{}").shareableText, "{}")
+    }
 }

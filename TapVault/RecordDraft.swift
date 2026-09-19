@@ -14,7 +14,8 @@ struct RecordDraft: Identifiable {
     init(record: TagRecord) {
         id = UUID(); preserved = record
         if let text = record.textValue { kind = .text; value = text }
-        else if let uri = record.uriValue { kind = .customURI; value = uri }
+        else if let uri = record.uriValue { kind = (try? TagRecord.uri(uri)) == nil ? .customURI : .url; value = uri }
+        else if record.mimeType == "application/json", let json = String(data: record.payload, encoding: .utf8) { kind = .json; value = json }
         else { kind = .bytes; value = record.payload.map { String(format: "%02X", $0) }.joined(separator: " "); secondary = record.mimeType ?? "application/octet-stream" }
     }
     func makeRecord() throws -> TagRecord {

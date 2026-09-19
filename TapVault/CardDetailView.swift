@@ -28,11 +28,11 @@ struct CardDetailView: View {
                                     VStack(alignment: .leading, spacing: 12) {
                                         Text("سجل \(index + 1)").font(.caption).foregroundStyle(.secondary)
                                         Text(record.displayValue).font(.body).textSelection(.enabled)
-                                        if record.isWritableContent {
+                                        if let sharedText = record.shareableText {
                                             HStack {
-                                                ShareLink(item: record.displayValue) { Label("مشاركة", systemImage: "square.and.arrow.up") }
+                                                ShareLink(item: sharedText) { Label("مشاركة", systemImage: "square.and.arrow.up") }
                                                 Spacer()
-                                                Button { qrText = record.displayValue } label: { Label("رمز QR", systemImage: "qrcode") }
+                                                Button { qrText = sharedText } label: { Label("رمز QR", systemImage: "qrcode") }
                                             }.font(.subheadline).frame(minHeight: 44)
                                         }
                                         DisclosureGroup("البيانات التقنية") {

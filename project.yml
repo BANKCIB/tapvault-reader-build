@@ -40,6 +40,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
     dependencies:
       - target: TapVault
+      - package: CardCore
 schemes:
   TapVault:
     build:

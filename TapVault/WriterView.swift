@@ -48,7 +48,7 @@ struct WriterView: View {
                     }.onDelete { records.remove(atOffsets: $0) }.onMove { records.move(fromOffsets: $0, toOffset: $1) }
                     Button { draft = RecordDraft() } label: { Label("إضافة سجل", systemImage: "plus.circle.fill").frame(minHeight: 44) }
                         .disabled(records.count >= 32).accessibilityIdentifier("add-record")
-                } header: { HStack { Text("المحتوى · \(records.count) سجل"); Spacer(); EditButton().font(.caption) } }
+                } header: { HStack { Text("المحتوى · \(records.count) سجل"); Spacer(); EditButton().font(.caption).frame(minWidth: 44, minHeight: 44) } }
                 Section("قبل الكتابة") {
                     LabeledContent("حجم رسالة NDEF", value: "\(size) بايت").accessibilityIdentifier("message-size")
                     Text("هذا حجم الرسالة مع ترويساتها. يجب أن تتسع لها سعة NDEF التي يعلنها الوسم؛ بعض ذاكرة الشريحة مخصص للنظام.").font(.footnote).foregroundStyle(.secondary)
@@ -80,7 +80,7 @@ struct WriterView: View {
             .confirmationDialog("استبدال محتوى وسم الوجهة بهذه الرسالة؟", isPresented: $writeConfirmation, titleVisibility: .visible) {
                 Button("حفظ وبدء الكتابة") { save(write: true) }; Button("إلغاء", role: .cancel) {}
             }
-        }
+        }.environment(\.layoutDirection, .rightToLeft).environment(\.locale, Locale(identifier: "ar"))
     }
     private func save(write: Bool) {
         do {
@@ -134,7 +134,7 @@ struct RecordEditor: View {
                 }
             }
             .onChange(of: draft.kind) { _, _ in draft.value = ""; draft.secondary = ""; draft.body = ""; draft.extra = ""; attempted = false }
-        }
+        }.environment(\.layoutDirection, .rightToLeft).environment(\.locale, Locale(identifier: "ar"))
     }
     @ViewBuilder private var fields: some View {
         switch draft.kind {
@@ -181,8 +181,10 @@ struct RecordEditor: View {
     private var hint: String {
         switch draft.kind {
         case .contact: return "تُحفظ جهة الاتصال بصيغة vCard. قراءتها قد تحتاج إلى تطبيق يدعم هذه الصيغة؛ لا يضيفها الآيفون تلقائيًا عند تقريب الوسم."
-        case .json, .bytes, .customURI: return "للأنظمة والتطبيقات التي تعرف هذه البيانات. يجب أن يدعم النظام القارئ الصيغة أو الرابط الذي تختاره."
-        case .phone, .sms, .email: return "يسجل الوسم بيانات الإجراء؛ إجراء مكالمة أو إرسال رسالة يتطلب تفاعل المستخدم وتطبيقًا متوافقًا."
+        case .customURI: return "يحتاج هذا الرابط إلى تطبيق قارئ متوافق. الآيفون لا يفتح الروابط المخصصة تلقائيًا من الوسم في الخلفية؛ استخدم رابط موقع https إذا أردت فتح صفحة."
+        case .json, .bytes: return "للأنظمة والتطبيقات التي تعرف هذه البيانات. يجب أن يدعم النظام القارئ الصيغة التي تختارها."
+        case .sms: return "أبقِ نص الرسالة فارغًا لأفضل توافق مع الآيفون. النص المرفق يحتاج إلى قارئ يدعم صيغة SMS الكاملة؛ الإرسال يتطلب تفاعل المستخدم."
+        case .phone, .email: return "يسجل الوسم بيانات الإجراء؛ إجراء مكالمة أو إرسال رسالة يتطلب تفاعل المستخدم وتطبيقًا متوافقًا."
         case .location: return "يُحفظ رابط خرائط بالإحداثيات التي تدخلها، دون طلب الوصول إلى موقعك."
         default: return "الرابط مناسب لفتح موقع على الأجهزة المتوافقة. النص يمكن قراءته من داخل تطبيق يدعم NDEF."
         }

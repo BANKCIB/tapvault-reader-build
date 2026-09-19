@@ -22,10 +22,17 @@ struct TapVaultApp: App {
             .environment(\.layoutDirection, .rightToLeft)
             .environment(\.locale, Locale(identifier: "ar"))
             .tint(Theme.accent)
+            .preferredColorScheme(testColorScheme)
             .onChange(of: scenePhase) { _, phase in
                 if phase == .background { nfc.cancel(); nfc.scanned = nil; store.lock() }
             }
         }
+    }
+    private var testColorScheme: ColorScheme? {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") && ProcessInfo.processInfo.arguments.contains("--uitesting-dark") { return .dark }
+        #endif
+        return nil
     }
 }
 

@@ -1,6 +1,13 @@
 import XCTest
+import CoreNFC
+import CardCore
 
 final class TapVaultUITests: XCTestCase {
+    func testDisplayedSizeMatchesAppleNDEFEncoder() throws {
+        let records: [TagRecord] = try [.uri("https://example.com"), .text("مرحبا"), .mime("application/octet-stream", data: Data(count: 255)), .mime("application/octet-stream", data: Data(count: 256)), TagRecord(tnf: 2, type: Data("text/plain".utf8), identifier: Data([1, 2]), payload: Data([65]))]
+        let payloads = records.map { NFCNDEFPayload(format: NFCTypeNameFormat(rawValue: $0.tnf)!, type: $0.type, identifier: $0.identifier, payload: $0.payload) }
+        XCTAssertEqual(NFCNDEFMessage(records: payloads).length, records.reduce(0) { $0 + $1.encodedByteCount })
+    }
     @MainActor
     func testLibraryNavigationAndEditing() {
         let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
@@ -11,7 +18,7 @@ final class TapVaultUITests: XCTestCase {
         let title = app.textFields["card-title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Demo note")
         app.buttons["add-record"].tap()
-        let field = app.textFields["النص"]; XCTAssertTrue(field.waitForExistence(timeout: 5))
+        let field = app.textFields["النص"].exists ? app.textFields["النص"] : app.textViews["النص"]; XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap(); field.typeText("Hello NFC")
         app.buttons["confirm-record"].tap()
         app.buttons["save-card"].tap()
@@ -28,6 +35,8 @@ final class TapVaultUITests: XCTestCase {
         XCTAssertTrue(app.buttons["create-backup"].waitForExistence(timeout: 5)); capture("04-vault")
     }
     private func capture(_ name: String) {
+        // XCTest can return from a tap before the sheet transition finishes.
+        Thread.sleep(forTimeInterval: 1)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 
@@ -49,7 +58,7 @@ final class TapVaultUITests: XCTestCase {
         app.buttons["confirm-record"].tap()
         app.buttons["add-record"].tap()
         app.buttons["record-kind"].tap(); app.buttons["بيانات JSON"].tap()
-        let json = app.textFields["بيانات JSON"]; json.tap(); json.typeText("{\"id\":123}")
+        let json = app.textFields["بيانات JSON"].exists ? app.textFields["بيانات JSON"] : app.textViews["بيانات JSON"]; json.tap(); json.typeText("{\"id\":123}")
         app.buttons["confirm-record"].tap()
         capture("07-multiple-records")
         app.buttons["save-card"].tap()
@@ -65,7 +74,7 @@ final class TapVaultUITests: XCTestCase {
 
     @MainActor
     func testWriterDarkModeAndContactPreview() {
-        let app = XCUIApplication(); app.launchArguments = ["--uitesting", "-AppleInterfaceStyle", "Dark"]; app.launch()
+        let app = XCUIApplication(); app.launchArguments = ["--uitesting", "--uitesting-dark"]; app.launch()
         app.buttons["add-card"].tap(); app.buttons["تجهيز وسم جديد"].tap()
         capture("08-writer-dark-empty")
         app.buttons["add-record"].tap()
