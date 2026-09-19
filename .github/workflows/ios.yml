@@ -47,7 +47,8 @@ jobs:
           # This ad-hoc signature is only for the simulator; no private credentials are used.
           xcodebuild build-for-testing -project TapVault.xcodeproj -scheme TapVault -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build/Simulator CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 2>&1 | tee build/ui-build.log
           codesign --verify --strict build/Simulator/Build/Products/Debug-iphonesimulator/TapVault.app
-          codesign -d --entitlements :- build/Simulator/Build/Products/Debug-iphonesimulator/TapVault.app > build/simulator-entitlements.plist
+          # Xcode embeds simulator entitlements in __TEXT,__entitlements, separately from the host signature.
+          cp build/Simulator/Build/Intermediates.noindex/TapVault.build/Debug-iphonesimulator/TapVault.build/TapVault.app-Simulated.xcent build/simulator-entitlements.plist
           /usr/libexec/PlistBuddy -c 'Print :application-identifier' build/simulator-entitlements.plist
           xcodebuild test-without-building -project TapVault.xcodeproj -scheme TapVault -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build/Simulator -parallel-testing-enabled NO -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 2>&1 | tee build/ui-tests.log
       - name: Export UI screenshots
