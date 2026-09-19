@@ -46,7 +46,7 @@ final class TapVaultUITests: XCTestCase {
         }
         XCTAssertTrue(version.waitForExistence(timeout: 5))
         // LabeledContent may include its Arabic title in the accessibility label.
-        XCTAssertTrue(version.label.contains("1.3.0 (7)"))
+        XCTAssertTrue(version.label.contains("1.3.0 (8)"))
         capture("10-vault-version")
     }
     private func capture(_ name: String) {

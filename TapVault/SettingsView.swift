@@ -35,6 +35,8 @@ struct SettingsView: View {
                     Label("مفتاح الجهاز محفوظ في Keychain", systemImage: "key")
                     Text("مشاركة سجل نصي أو رمز QR تكشف ذلك السجل لمن ترسله إليه. لا توجد مزامنة سحابية تلقائية. حذف التطبيق قد يفقد البيانات؛ احتفظ بنسخة مشفرة ورمزها.").font(.footnote).foregroundStyle(.secondary)
                 }
+                Link("سياسة الخصوصية", destination: URL(string: "https://github.com/BANKCIB/tapvault-reader-build/blob/main/PRIVACY.md")!).frame(minHeight: 44)
+                Link("المساعدة والدعم", destination: URL(string: "https://github.com/BANKCIB/tapvault-reader-build/blob/main/SUPPORT.md")!).frame(minHeight: 44)
             }
             Section("عن التطبيق") {
                 LabeledContent("الإصدار") {

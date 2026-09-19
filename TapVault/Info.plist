@@ -11,6 +11,7 @@
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>LSRequiresIPhoneOS</key><true/>
+<key>ITSAppUsesNonExemptEncryption</key><false/>
 <key>NFCReaderUsageDescription</key><string>قراءة بيانات وسوم NFC التي تختارها وكتابة النصوص والروابط على وسومك المتوافقة.</string>
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
