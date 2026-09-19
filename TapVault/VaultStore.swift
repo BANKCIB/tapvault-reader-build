@@ -2,27 +2,31 @@ import Foundation
 import SwiftUI
 import CryptoKit
 import Security
-import LocalAuthentication
 import CardCore
 
 @MainActor
 final class VaultStore: ObservableObject {
     @Published private(set) var cards: [SavedCard] = []
-    @Published private(set) var isUnlocked = false
-    @Published private(set) var authenticating = false
+    @Published private(set) var isReady = false
     @Published var errorMessage: String?
-    private var epoch = UUID()
-    private var context: LAContext?
     private var isPreview = false
-    private let service = "com.m7madv.tapvault.local-key.v1"
+    private var storageName: String {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--uitesting-persistence") { return "TapVaultUITests" }
+        #endif
+        return "TapVault"
+    }
+    private var service: String {
+        storageName == "TapVault" ? "com.m7madv.tapvault.local-key.v1" : "com.m7madv.tapvault.uitests"
+    }
     private var fileURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("TapVault", isDirectory: true).appendingPathComponent("cards.sealed")
+            .appendingPathComponent(storageName, isDirectory: true).appendingPathComponent("cards.sealed")
     }
     init() {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--uitesting") {
-            isPreview = true; isUnlocked = true
+            isPreview = true; isReady = true
             var tag = SavedCard(title: "بطاقة التواصل", notes: "رابط صفحتي الشخصية؛ جاهز للكتابة على وسم فارغ.", records: [(try? .uri("https://example.com"))].compactMap { $0 })
             tag.favorite = true
             cards = [tag, SavedCard(title: "إقامتي القادمة", category: .hotel, notes: "معلومات الحجز فقط. مفتاح الغرفة يصدر من الفندق.", issuerURL: "https://example.com"), SavedCard(title: "رحلات المدينة", category: .transit, notes: "مرجع لبطاقة التنقل؛ ليس تذكرة إلكترونية.")]
@@ -37,31 +41,19 @@ final class VaultStore: ObservableObject {
         }
         #endif
     }
-    func unlock() async {
-        guard !authenticating, !isUnlocked else { return }
-        errorMessage = nil; authenticating = true
-        let attempt = epoch
-        let auth = LAContext(); context = auth
-        defer { if epoch == attempt { authenticating = false; context = nil } }
+    func openLibrary() {
+        guard !isReady else { return }
+        errorMessage = nil
         do {
-            var authError: NSError?
-            guard auth.canEvaluatePolicy(.deviceOwnerAuthentication, error: &authError) else {
-                throw authError ?? NSError(domain: "TapVault", code: 1, userInfo: [NSLocalizedDescriptionKey: "فعّل رمز دخول للجهاز لفتح خزنتك."])
-            }
-            let granted = try await auth.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "افتح بطاقاتك المحفوظة بأمان")
-            guard granted, epoch == attempt else { return }
-            let loaded = try load()
-            guard epoch == attempt else { return }
-            cards = loaded; isUnlocked = true
-        } catch { if epoch == attempt { errorMessage = error.localizedDescription } }
-    }
-    func lock() {
-        guard !isPreview else { return }
-        epoch = UUID(); context?.invalidate(); context = nil
-        cards = []; isUnlocked = false; authenticating = false
+            cards = try load()
+            isReady = true
+        } catch {
+            // Keep writes disabled if existing data cannot be read.
+            errorMessage = error.localizedDescription
+        }
     }
     func save(_ card: SavedCard) throws {
-        guard isUnlocked else { throw CardError.invalidData }
+        guard isReady else { throw CardError.invalidData }
         try card.validate()
         var next = cards
         if let index = next.firstIndex(where: { $0.id == card.id }) { next[index] = card }
@@ -83,7 +75,7 @@ final class VaultStore: ObservableObject {
         let count = next.count - cards.count; try commit(next); return count
     }
     private func commit(_ next: [SavedCard]) throws {
-        guard isUnlocked else { throw CardError.invalidData }
+        guard isReady else { throw CardError.invalidData }
         try CardCollection.validate(next)
         if !isPreview {
             let key = try encryptionKey(create: !FileManager.default.fileExists(atPath: fileURL.path))

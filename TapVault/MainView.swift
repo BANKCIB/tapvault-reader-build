@@ -1,7 +1,7 @@
 import SwiftUI
 import CardCore
 
-struct EditorRequest: Identifiable { let id = UUID(); var card: SavedCard?; var reference = false }
+struct EditorRequest: Identifiable { let id = UUID(); var card: SavedCard?; var reference = false; var kind: RecordKind? }
 
 struct MainView: View {
     @EnvironmentObject var store: VaultStore
@@ -14,18 +14,21 @@ struct MainView: View {
                 LibraryView(onCreate: { editor = EditorRequest() }, onReference: { editor = EditorRequest(reference: true) })
                     .navigationDestination(for: UUID.self) { id in CardDetailView(id: id) }
             }.tabItem { Label("مكتبتي", systemImage: "square.grid.2x2") }
-            NavigationStack { ToolsView(onCreate: { editor = EditorRequest() }, onReference: { editor = EditorRequest(reference: true) }) }
-                .tabItem { Label("الأدوات", systemImage: "wave.3.right") }
-            NavigationStack { SettingsView() }.tabItem { Label("الخزنة", systemImage: "lock.shield") }
+            NavigationStack {
+                WritingHomeView(onCreate: { kind in editor = EditorRequest(kind: kind) })
+            }.tabItem { Label("الكتابة", systemImage: "square.and.pencil") }
+            NavigationStack { ToolsView(onReference: { editor = EditorRequest(reference: true) }) }
+                .tabItem { Label("القراءة", systemImage: "radiowaves.left.and.right") }
+            NavigationStack { SettingsView() }.tabItem { Label("الإعدادات", systemImage: "gearshape") }
         }
         .sheet(item: $editor) { request in
-            if request.card == nil && !request.reference { WriterView() }
+            if request.card == nil && !request.reference { WriterView(initialKind: request.kind) }
             else { CardEditor(card: request.card, reference: request.reference) }
         }
         .onReceive(nfc.$scanned) { card in
             guard let card else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                guard store.isUnlocked, nfc.scanned?.id == card.id else { return }; editor = EditorRequest(card: card)
+                guard store.isReady, nfc.scanned?.id == card.id else { return }; editor = EditorRequest(card: card)
             }
         }
         .onReceive(nfc.$errorMessage) { if let message = $0 { alertText = message } }

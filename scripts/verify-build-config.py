@@ -13,14 +13,20 @@ with (root / 'TapVault/TapVault.entitlements').open('rb') as stream:
 assert entitlements.get('com.apple.developer.nfc.readersession.formats') == ['TAG'], 'Expected current TAG entitlement; NDEF is a deprecated entitlement value'
 
 def check_metadata(info):
-    for key in ['CFBundleDisplayName', 'NFCReaderUsageDescription', 'NSFaceIDUsageDescription']:
+    for key in ['CFBundleDisplayName', 'NFCReaderUsageDescription']:
         assert isinstance(info.get(key), str) and info[key].strip(), f'Missing {key}'
+    assert 'NSFaceIDUsageDescription' not in info, 'App authentication has been removed'
     assert 'UILaunchScreen' in info, 'Missing launch configuration causes legacy screen sizing'
     assert info['CFBundleDisplayName'] == 'قُرب', 'Display name was lost'
     assert 'ar' in info['CFBundleLocalizations'], 'Arabic localization missing'
     assert info['UTExportedTypeDeclarations'][0]['UTTypeIdentifier'] == 'com.m7madv.tapvault.backup', 'Encrypted backup type missing'
     assert info['UIApplicationSceneManifest']['UIApplicationSupportsMultipleScenes'] is False
 
+# Authentication must not return through a leftover view, callback or import.
+for source in (root / 'TapVault').glob('*.swift'):
+    swift = source.read_text('utf-8')
+    for token in ['LocalAuthentication', 'LAContext', 'evaluatePolicy', 'struct LockView', 'store.lock()', 'store.unlock()', '"faceid"']:
+        assert token not in swift, f'App lock remains in {source.name}: {token}'
 check_metadata(source_info)
 assert source_info['CFBundleShortVersionString'] == '$(MARKETING_VERSION)', 'Version must come from project settings'
 assert source_info['CFBundleVersion'] == '$(CURRENT_PROJECT_VERSION)', 'Build number must come from project settings'

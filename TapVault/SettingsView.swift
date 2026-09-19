@@ -13,13 +13,10 @@ struct SettingsView: View {
     @State private var alertText: String?
     var body: some View {
         Form {
-            Section("أمان الخزنة") {
-                HStack(spacing: 16) {
-                    Image(systemName: "lock.shield").font(.largeTitle).foregroundStyle(Theme.accent).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 6) { Text("خزنتك الشخصية").font(.headline); Text("محلية. مشفرة. تحت تحكمك.").font(.subheadline).foregroundStyle(.secondary) }
-                }.padding(.vertical, 12)
-                LabeledContent("البطاقات المحفوظة", value: "\(store.cards.count)")
-                Button { store.lock() } label: { Label("قفل الآن", systemImage: "lock") }.frame(minHeight: 44)
+            Section("مكتبتك على هذا الجهاز") {
+                LabeledContent("العناصر المحفوظة", value: "\(store.cards.count)")
+                LabeledContent("محتوى قابل للكتابة", value: "\(store.cards.filter(\.canWrite).count)")
+                Text("يفتح التطبيق مباشرة. تُحفظ بياناتك محليًا على هذا الجهاز.").font(.footnote).foregroundStyle(.secondary)
             }
             Section {
                 Button { createBackup() } label: { Label("إنشاء نسخة مشفرة", systemImage: "arrow.up.doc") }.frame(minHeight: 44).accessibilityIdentifier("create-backup")
@@ -36,7 +33,6 @@ struct SettingsView: View {
                     Label("لا يوجد حساب أو خادم للتطبيق", systemImage: "externaldrive")
                     Label("تشفير البيانات والنسخ باستخدام AES-GCM", systemImage: "lock.doc")
                     Label("مفتاح الجهاز محفوظ في Keychain", systemImage: "key")
-                    Label("قفل عند الانتقال إلى الخلفية", systemImage: "app.badge.checkmark")
                     Text("مشاركة سجل نصي أو رمز QR تكشف ذلك السجل لمن ترسله إليه. لا توجد مزامنة سحابية تلقائية. حذف التطبيق قد يفقد البيانات؛ احتفظ بنسخة مشفرة ورمزها.").font(.footnote).foregroundStyle(.secondary)
                 }
             }
@@ -46,7 +42,7 @@ struct SettingsView: View {
                 }.accessibilityElement(children: .contain)
                 Text("التطبيق قارئ ومنظم لبيانات NFC القياسية. لا يستخرج مفاتيح البطاقات المحمية، ولا يحاكي بطاقة فندق أو قطار، ولا يتعامل مع بطاقات الدفع.").font(.footnote).foregroundStyle(.secondary)
             }
-        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("الخزنة")
+        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("الإعدادات")
         .sheet(item: $exported) { package in BackupExportSheet(package: package) }
         .sheet(item: $restore) { package in BackupRestoreSheet(package: package) }
         .sheet(item: $wallet) { package in WalletSheet(controller: package.controller) }

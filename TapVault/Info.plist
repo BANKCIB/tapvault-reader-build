@@ -12,7 +12,6 @@
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
 <key>LSRequiresIPhoneOS</key><true/>
 <key>NFCReaderUsageDescription</key><string>قراءة بيانات وسوم NFC التي تختارها وكتابة النصوص والروابط على وسومك المتوافقة.</string>
-<key>NSFaceIDUsageDescription</key><string>استخدم Face ID لفتح خزنتك الشخصية.</string>
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>

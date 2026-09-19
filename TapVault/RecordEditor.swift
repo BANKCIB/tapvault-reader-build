@@ -33,6 +33,11 @@ struct RecordEditor: View {
                             }
                         }
                     }.pickerStyle(.menu).accessibilityIdentifier("record-kind")
+                    Text(draft.kind.explanation).font(.subheadline).foregroundStyle(.secondary)
+                    LabeledContent("مثال") {
+                        Text(draft.kind.example)
+                            .environment(\.layoutDirection, draft.kind.technicalExample ? .leftToRight : .rightToLeft)
+                    }.font(.footnote)
                 }
                 Section("المحتوى") { fields }
                 Section("المعاينة") {
@@ -47,7 +52,7 @@ struct RecordEditor: View {
                 Section { Text(hint).font(.footnote).foregroundStyle(.secondary) }
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("إعداد السجل").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(draft.kind.title).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

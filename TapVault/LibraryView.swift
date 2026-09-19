@@ -63,29 +63,22 @@ struct LibraryView: View {
         }
     }
     private var hero: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("مساحة شخصية").font(.footnote.weight(.medium)).foregroundStyle(.white.opacity(0.8))
-                    Text("وسومك، جاهزة للاستخدام.").font(.system(.title, design: .rounded, weight: .semibold))
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "wave.3.right").font(.system(size: 44, weight: .ultraLight)).foregroundStyle(Color(red: 0.63, green: 0.88, blue: 0.81)).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("\(store.cards.count) محفوظة").font(.headline)
+                Spacer()
+                Text("\(store.cards.filter(\.canWrite).count) قابلة للكتابة").font(.subheadline)
             }
-            HStack(spacing: 24) {
-                metric(store.cards.count, "محفوظة")
-                metric(store.cards.filter(\.canWrite).count, "قابلة للكتابة")
-                Spacer(minLength: 0)
-            }
+            Button(action: onCreate) {
+                Label("تجهيز محتوى للكتابة", systemImage: "square.and.pencil")
+                    .font(.headline).frame(maxWidth: .infinity, minHeight: 48)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(Theme.ink)
+            }.accessibilityIdentifier("library-write")
             Button { nfc.scan() } label: {
                 Label(nfc.busy ? "القراءة جارية…" : "قراءة بطاقة أو وسم", systemImage: "radiowaves.left.and.right")
-                    .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(Theme.ink)
+                    .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
             }.disabled(nfc.busy).accessibilityIdentifier("scan-tag")
-        }.foregroundStyle(.white).padding(24).background(Theme.ink, in: RoundedRectangle(cornerRadius: 28))
-    }
-    private func metric(_ value: Int, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) { Text(value, format: .number).font(.title2.weight(.semibold)).monospacedDigit(); Text(label).font(.caption).foregroundStyle(.white.opacity(0.8)) }
+        }.foregroundStyle(.white).padding(20).background(Theme.ink, in: RoundedRectangle(cornerRadius: 24))
     }
     private var filters: some View {
         HStack {

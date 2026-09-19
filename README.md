@@ -1,6 +1,6 @@
 # TapVault reader and writer build
 
-Source for the personal iPhone NFC utility, version 1.2.1 (6).
+Source for the personal iPhone NFC utility, version 1.3.0 (7).
 Detects compatible MIFARE and ISO 15693 tags before attempting NDEF.
 Includes read-only Ultralight EV1 product identification and encrypted local storage.
 Includes a multi-record NDEF composer for text, URLs, contacts, phone, email,

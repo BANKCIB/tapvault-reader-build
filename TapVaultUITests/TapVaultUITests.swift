@@ -30,11 +30,14 @@ final class TapVaultUITests: XCTestCase {
     @MainActor
     func testToolsAndVault() {
         let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
-        app.tabBars.buttons["الأدوات"].tap(); capture("03-tools")
+        app.tabBars.buttons["الكتابة"].tap(); capture("03-tools")
         XCTAssertTrue(app.buttons["open-writer"].exists)
+        capture("11-writing-catalogue")
+        app.tabBars.buttons["القراءة"].tap()
+        capture("03-reading")
         app.buttons["قراءة متقدمة"].tap()
         XCTAssertTrue(app.buttons["قراءة NDEF مباشرة"].exists)
-        app.tabBars.buttons["الخزنة"].tap()
+        app.tabBars.buttons["الإعدادات"].tap()
         XCTAssertTrue(app.buttons["create-backup"].waitForExistence(timeout: 5)); capture("04-vault")
         let version = app.staticTexts["app-version-value"]
         for _ in 0..<3 {
@@ -43,7 +46,7 @@ final class TapVaultUITests: XCTestCase {
         }
         XCTAssertTrue(version.waitForExistence(timeout: 5))
         // LabeledContent may include its Arabic title in the accessibility label.
-        XCTAssertTrue(version.label.contains("1.2.1 (6)"))
+        XCTAssertTrue(version.label.contains("1.3.0 (7)"))
         capture("10-vault-version")
     }
     private func capture(_ name: String) {
@@ -72,7 +75,7 @@ final class TapVaultUITests: XCTestCase {
     @MainActor
     func testWriterValidationMultipleRecordsAndEditRoundTrip() {
         let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
-        app.tabBars.buttons["الأدوات"].tap()
+        app.tabBars.buttons["الكتابة"].tap()
         let writer = app.buttons["open-writer"]
         if !writer.isHittable { app.swipeUp() }; writer.tap()
         XCTAssertFalse(app.buttons["save-card"].isEnabled)
@@ -128,5 +131,57 @@ final class TapVaultUITests: XCTestCase {
         app.buttons["save-card"].tap()
         XCTAssertTrue(app.staticTexts["تم التعرف على الشريحة"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["كتابة على وسم آخر"].exists)
+    }
+
+    @MainActor
+    func testDirectWritingChoiceAndExplanation() {
+        let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
+        app.tabBars.buttons["الكتابة"].tap()
+        let choice = app.buttons["write-url"]
+        XCTAssertTrue(choice.waitForExistence(timeout: 5)); choice.tap()
+        let url = app.textFields["الرابط"]
+        XCTAssertTrue(url.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["رابط موقع، قائمة طعام أو صفحة شخصية؛ يفتحه القارئ المتوافق."].exists)
+        url.tap(); url.typeText("https://example.com/quick")
+        capture("12-direct-url")
+        app.buttons["confirm-record"].tap()
+        let title = app.textFields["card-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Quick link")
+        app.buttons["save-card"].tap()
+        app.tabBars.buttons["مكتبتي"].tap()
+        XCTAssertTrue(app.staticTexts["Quick link"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testAutomaticOpeningBackgroundAndPersistence() {
+        let app = XCUIApplication()
+        // Use real encrypted storage and Keychain in an isolated DEBUG-only location.
+        app.launchArguments = ["--uitesting-persistence"]
+        app.launch()
+        XCTAssertTrue(app.buttons["scan-tag"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["unlock"].exists)
+        app.buttons["add-card"].tap(); app.buttons["تجهيز وسم جديد"].tap()
+        let unique = String(UUID().uuidString.prefix(8))
+        let name = "Saved " + unique
+        let content = "Keep " + unique
+        let title = app.textFields["card-title"]; title.tap(); title.typeText(name)
+        app.buttons["add-record"].tap()
+        let field = app.textFields["النص"].exists ? app.textFields["النص"] : app.textViews["النص"]
+        field.tap(); field.typeText(content)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, content)
+        XCTAssertFalse(app.buttons["unlock"].exists)
+        capture("13-return-without-lock")
+        app.buttons["confirm-record"].tap()
+        app.buttons["save-card"].tap()
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["scan-tag"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["unlock"].exists)
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout: 5))
+        app.staticTexts[name].tap()
+        XCTAssertTrue(app.staticTexts[content].waitForExistence(timeout: 5))
     }
 }

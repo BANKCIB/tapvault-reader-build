@@ -52,11 +52,11 @@ struct BackupRestoreSheet: View {
                         do {
                             let cards = try BackupCodec.open(package.data, recoveryKey: key)
                             let count = try store.merge(cards); feedback = "تمت إضافة \(count) بطاقة. جرى تجاوز البطاقات المكررة."; restored = true; key = ""
-                        } catch { feedback = "تعذرت الاستعادة. تحقق من الرمز وسلامة الملف. لم تتغير خزنتك." }
+                        } catch { feedback = "تعذرت الاستعادة. تحقق من الرمز وسلامة الملف. لم تتغير مكتبتك." }
                     }.disabled(key.isEmpty || restored).frame(minHeight: 44)
                     if let feedback { Text(feedback).foregroundStyle(restored ? Theme.accent : .red) }
                 }
-            }.navigationTitle("استعادة الخزنة").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("استعادة المكتبة").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("إغلاق") { dismiss() } } }
         }
     }

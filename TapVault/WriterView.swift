@@ -12,10 +12,15 @@ struct WriterView: View {
     @State private var errorMessage: String?
     @State private var discard = false
     @State private var writeConfirmation = false
-    init(card: SavedCard? = nil) {
+    init(card: SavedCard? = nil, initialKind: RecordKind? = nil) {
         original = card
         _title = State(initialValue: card?.title ?? "")
         _records = State(initialValue: card?.records.map { RecordDraft(record: $0) } ?? [])
+        if let initialKind, card == nil {
+            var first = RecordDraft()
+            first.kind = initialKind
+            _draft = State(initialValue: first)
+        }
     }
     private var size: Int { records.compactMap { try? $0.makeRecord() }.reduce(0) { $0 + $1.encodedByteCount } }
     private var ready: Bool { !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !records.isEmpty && !nfc.busy }
@@ -24,7 +29,7 @@ struct WriterView: View {
             Form {
                 Section {
                     TextField("اسم الوسم", text: $title).accessibilityIdentifier("card-title")
-                } header: { Text("اسم الوسم") } footer: {
+                } header: { Text("اسم المحتوى في مكتبتك") } footer: {
                     Text("اسم يساعدك على العثور على هذا المحتوى في مكتبتك.")
                 }
                 Section {
@@ -50,7 +55,7 @@ struct WriterView: View {
                             Button("حذف السجل", role: .destructive) { records.removeAll { $0.id == item.id } }
                         }
                     }.onDelete { records.remove(atOffsets: $0) }.onMove { records.move(fromOffsets: $0, toOffset: $1) }
-                    Button { draft = RecordDraft() } label: { Label("إضافة سجل", systemImage: "plus.circle.fill").frame(minHeight: 44) }
+                    Button { draft = RecordDraft() } label: { Label("إضافة محتوى", systemImage: "plus.circle.fill").frame(minHeight: 44) }
                         .disabled(records.count >= 32).accessibilityIdentifier("add-record")
                 } header: { HStack { Text("المحتوى · \(records.count) سجل"); Spacer(); if !records.isEmpty { EditButton().font(.caption).frame(minWidth: 44, minHeight: 44) } } }
                 Section("ملخص الكتابة") {
@@ -64,15 +69,17 @@ struct WriterView: View {
                 }
                 if let errorMessage { Section { Label(errorMessage, systemImage: "exclamationmark.circle").foregroundStyle(.red) } }
                 Section {
-                    Button { writeConfirmation = true } label: { Label("حفظ وكتابة على وسم", systemImage: "wave.3.right").frame(maxWidth: .infinity, minHeight: 44) }
+                    Button { writeConfirmation = true } label: { Label("كتابة على وسم", systemImage: "wave.3.right").frame(maxWidth: .infinity, minHeight: 44) }
                         .buttonStyle(.borderedProminent).disabled(!ready).accessibilityIdentifier("save-and-write")
-                } footer: { Text("زر «حفظ» في الأعلى يحفظ المحتوى في مكتبتك دون الكتابة على وسم.") }
+                } footer: {
+                    Text("تُحفظ نسخة في مكتبتك عند بدء الكتابة. يمكنك الاكتفاء بزر «حفظ في المكتبة» في الأعلى إذا أردت الكتابة لاحقًا.")
+                }
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("تجهيز وسم").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("إلغاء") { discard = true } }
-                ToolbarItem(placement: .confirmationAction) { Button("حفظ") { save(write: false) }.disabled(!ready).accessibilityIdentifier("save-card") }
+                ToolbarItem(placement: .confirmationAction) { Button("حفظ في المكتبة") { save(write: false) }.disabled(!ready).accessibilityIdentifier("save-card") }
             }
             .sheet(item: $draft) { item in
                 RecordEditor(draft: item, isEditing: records.contains { $0.id == item.id }) { value in
@@ -96,7 +103,12 @@ struct WriterView: View {
             card.records = try records.map { try $0.makeRecord() }; card.updatedAt = Date()
             try card.validate(); try store.save(card)
             dismiss()
-            if write { DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { if store.isUnlocked { nfc.write(card) } } }
+            if write {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    guard store.isReady, UIApplication.shared.applicationState == .active else { return }
+                    nfc.write(card)
+                }
+            }
         } catch { errorMessage = error.localizedDescription }
     }
     private func move(_ id: UUID, by offset: Int) {
