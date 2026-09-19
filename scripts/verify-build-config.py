@@ -3,6 +3,7 @@ from pathlib import Path
 import plistlib
 import sys
 import zipfile
+import re
 
 root = Path(__file__).resolve().parent.parent
 with (root / 'TapVault/Info.plist').open('rb') as stream:
@@ -21,6 +22,8 @@ def check_metadata(info):
     assert info['UIApplicationSceneManifest']['UIApplicationSupportsMultipleScenes'] is False
 
 check_metadata(source_info)
+assert source_info['CFBundleShortVersionString'] == '$(MARKETING_VERSION)', 'Version must come from project settings'
+assert source_info['CFBundleVersion'] == '$(CURRENT_PROJECT_VERSION)', 'Build number must come from project settings'
 if len(sys.argv) > 1:
     target = Path(sys.argv[1])
     if target.suffix == '.ipa':
@@ -36,4 +39,7 @@ if len(sys.argv) > 1:
     assert info['CFBundleSupportedPlatforms'] == ['iPhoneOS'], 'Expected physical iPhone build'
     assert info['CFBundleIdentifier'] == 'com.m7madv.tapvault'
     assert info['MinimumOSVersion'] == '17.0'
+    project = (root / 'project.yml').read_text('utf-8')
+    assert info['CFBundleShortVersionString'] == re.search(r'MARKETING_VERSION: "([^"]+)"', project).group(1)
+    assert info['CFBundleVersion'] == re.search(r'CURRENT_PROJECT_VERSION: "([^"]+)"', project).group(1)
 print('PASS: NFC entitlement, privacy strings, Arabic name, launch configuration and backup type preserved.')
