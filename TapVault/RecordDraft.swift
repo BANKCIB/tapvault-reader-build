@@ -8,7 +8,7 @@ struct RecordDraft: Identifiable {
     var secondary = ""
     var body = ""
     var extra = ""
-    // Preserve a read/imported record exactly unless its editor is confirmed.
+    // Preserve the original encoding while its editable fields are unchanged.
     var preserved: TagRecord?
     init(id: UUID = UUID()) { self.id = id }
     init(record: TagRecord) {
@@ -17,6 +17,9 @@ struct RecordDraft: Identifiable {
         else if let uri = record.uriValue { kind = (try? TagRecord.uri(uri)) == nil ? .customURI : .url; value = uri }
         else if record.mimeType == "application/json", let json = String(data: record.payload, encoding: .utf8) { kind = .json; value = json }
         else { kind = .bytes; value = record.payload.map { String(format: "%02X", $0) }.joined(separator: " "); secondary = record.mimeType ?? "application/octet-stream" }
+    }
+    func hasSameFields(as other: RecordDraft) -> Bool {
+        kind == other.kind && value == other.value && secondary == other.secondary && body == other.body && extra == other.extra
     }
     func makeRecord() throws -> TagRecord {
         if let preserved { return preserved }

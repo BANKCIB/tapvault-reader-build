@@ -31,13 +31,35 @@ final class TapVaultUITests: XCTestCase {
     func testToolsAndVault() {
         let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
         app.tabBars.buttons["الأدوات"].tap(); capture("03-tools")
+        XCTAssertTrue(app.buttons["open-writer"].exists)
+        app.buttons["قراءة متقدمة"].tap()
+        XCTAssertTrue(app.buttons["قراءة NDEF مباشرة"].exists)
         app.tabBars.buttons["الخزنة"].tap()
         XCTAssertTrue(app.buttons["create-backup"].waitForExistence(timeout: 5)); capture("04-vault")
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["1.2.1 (6)"].exists)
     }
     private func capture(_ name: String) {
         // XCTest can return from a tap before the sheet transition finishes.
         Thread.sleep(forTimeInterval: 1)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+
+    @MainActor
+    func testSwitchingRecordTypeKeepsDraft() {
+        let app = XCUIApplication(); app.launchArguments = ["--uitesting"]; app.launch()
+        app.buttons["add-card"].tap(); app.buttons["تجهيز وسم جديد"].tap()
+        app.buttons["add-record"].tap()
+        let text = app.textFields["النص"].exists ? app.textFields["النص"] : app.textViews["النص"]
+        text.tap(); text.typeText("Keep my draft")
+        app.buttons["record-kind"].tap(); app.buttons["رابط موقع"].tap()
+        let url = app.textFields["الرابط"]; url.tap(); url.typeText("https://example.com")
+        app.buttons["record-kind"].tap(); app.buttons["نص"].tap()
+        XCTAssertEqual(text.value as? String, "Keep my draft")
+        app.buttons["record-kind"].tap(); app.buttons["رابط موقع"].tap()
+        XCTAssertEqual(url.value as? String, "https://example.com")
+        app.buttons["confirm-record"].tap()
+        XCTAssertTrue(app.staticTexts["https://example.com"].exists)
     }
 
     @MainActor
