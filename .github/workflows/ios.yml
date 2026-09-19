@@ -43,7 +43,13 @@ jobs:
           echo "$DEVICE_ID" > build/simulator-id.txt
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
-          xcodebuild test -project TapVault.xcodeproj -scheme TapVault -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -parallel-testing-enabled NO -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/ui-tests.log
+          # Simulator Keychain access requires a signed application identity.
+          # This ad-hoc signature is only for the simulator; no private credentials are used.
+          xcodebuild build-for-testing -project TapVault.xcodeproj -scheme TapVault -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build/Simulator CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 2>&1 | tee build/ui-build.log
+          codesign --verify --strict build/Simulator/Build/Products/Debug-iphonesimulator/TapVault.app
+          codesign -d --entitlements :- build/Simulator/Build/Products/Debug-iphonesimulator/TapVault.app > build/simulator-entitlements.plist
+          /usr/libexec/PlistBuddy -c 'Print :application-identifier' build/simulator-entitlements.plist
+          xcodebuild test-without-building -project TapVault.xcodeproj -scheme TapVault -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build/Simulator -parallel-testing-enabled NO -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- 2>&1 | tee build/ui-tests.log
       - name: Export UI screenshots
         if: always()
         run: |

@@ -23,6 +23,7 @@ targets:
       base:
         INFOPLIST_FILE: TapVault/Info.plist
         CODE_SIGN_ENTITLEMENTS: TapVault/TapVault.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]": TapVault/Simulator.entitlements
         TARGETED_DEVICE_FAMILY: "1"
         PRODUCT_BUNDLE_IDENTIFIER: com.m7madv.tapvault
         MARKETING_VERSION: "1.3.0"
