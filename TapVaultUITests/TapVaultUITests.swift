@@ -36,8 +36,14 @@ final class TapVaultUITests: XCTestCase {
         XCTAssertTrue(app.buttons["قراءة NDEF مباشرة"].exists)
         app.tabBars.buttons["الخزنة"].tap()
         XCTAssertTrue(app.buttons["create-backup"].waitForExistence(timeout: 5)); capture("04-vault")
-        app.swipeUp()
-        XCTAssertTrue(app.staticTexts["1.2.1 (6)"].exists)
+        let version = app.staticTexts["app-version-value"]
+        for _ in 0..<3 {
+            if version.exists && version.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(version.waitForExistence(timeout: 5))
+        XCTAssertEqual(version.label, "1.2.1 (6)")
+        capture("10-vault-version")
     }
     private func capture(_ name: String) {
         // XCTest can return from a tap before the sheet transition finishes.

@@ -41,7 +41,9 @@ struct SettingsView: View {
                 }
             }
             Section("عن التطبيق") {
-                LabeledContent("الإصدار", value: versionDescription).accessibilityIdentifier("app-version")
+                LabeledContent("الإصدار") {
+                    Text(versionDescription).accessibilityIdentifier("app-version-value")
+                }.accessibilityElement(children: .contain)
                 Text("التطبيق قارئ ومنظم لبيانات NFC القياسية. لا يستخرج مفاتيح البطاقات المحمية، ولا يحاكي بطاقة فندق أو قطار، ولا يتعامل مع بطاقات الدفع.").font(.footnote).foregroundStyle(.secondary)
             }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("الخزنة")
